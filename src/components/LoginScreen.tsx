@@ -5,6 +5,10 @@ import React, { useEffect, useRef, useState } from "react";
 import { useBoundStore } from "~/hooks/useBoundStore";
 import { useRouter } from "next/router";
 
+import { auth, provider } from "../firebase/firebase";
+import { signInWithPopup, createUserWithEmailAndPassword } from "firebase/auth";
+import { boolean } from "zod";
+
 export const FacebookLogoSvg = (props: ComponentProps<"svg">) => {
   return (
     <svg width="12" height="22" viewBox="0 0 12 22" {...props}>
@@ -97,6 +101,116 @@ export const LoginScreen = ({
     void router.push("/learn");
   };
 
+  const [age, setAge] = useState(0);
+  const [nama, setNama] = useState("");
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
+
+  interface user {
+    age: number;
+    name: string;
+    email: string;
+    password: string;
+  }
+
+  const users: user[] = [
+    {
+      age: 20,
+      name: "admin1",
+      email: "admin1@gmail.com",
+      password: "admin1",
+    },
+    {
+      age: 20,
+      name: "admin2",
+      email: "admin2@gmail.com",
+      password: "admin2",
+    },
+  ];
+
+  const buttonClick = () => {
+    console.info(age, nama, email, pass);
+
+    if (loginScreenState === "LOGIN") {
+      let exist = false;
+
+      users.forEach((user) => {
+        console.info(user);
+        if (
+          (email == user.email || email == user.name) &&
+          pass == user.password
+        ) {
+          exist = true;
+          setEmail(user.email.toString());
+          console.info("passed");
+        }
+      });
+      if (exist) {
+        logInAndSetUserProperties();
+        console.info("masuk");
+      } else {
+        console.info("salah");
+      }
+
+      (email == users[2]?.email || email == users[2]?.name) &&
+        console.info("passed");
+
+      // users.forEach(
+      //   (user)=>{
+      //     if( name == user.name && pass == user.password ){
+
+      //     }else{
+      //       console.info("salah");
+      //     }
+      //   }
+      // )
+    } else {
+      let alreadyExist = false;
+      users.forEach((user) => {
+        if (nama == user.name && pass == user.password) {
+          alreadyExist = true;
+        }
+      });
+      if (!alreadyExist) {
+        // let newUser: user = {
+        // age: age,
+        // name: nama.toString(),
+        // email: email,
+        // password: pass,
+        // };
+        // users.push(newUser);
+
+        // users.push({age, name : nama.toString(), email, password : pass});
+        // users.push({age : 2, name : "koko", email : "koko", password : "koko"});
+        console.info("data tersimpan");
+        console.info(users[2]);
+      } else {
+        console.info("data sudah ada");
+      }
+    }
+
+    setLoginScreenState("LOGIN");
+    setEmail("");
+    setPass("");
+  };
+
+  const signInWithEmail = async () => {
+    try {
+      await createUserWithEmailAndPassword(auth, email, pass);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    try {
+      const result = await signInWithPopup(auth, provider);
+      logInAndSetUserProperties();
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   return (
     <article
       className={[
@@ -107,7 +221,7 @@ export const LoginScreen = ({
       ].join(" ")}
       aria-hidden={!loginScreenState}
     >
-      <header className="flex flex-row-reverse justify-between sm:flex-row bg-[#fbe4d8]">
+      <header className="flex flex-row-reverse justify-between bg-[#fbe4d8] sm:flex-row">
         <button
           className="flex text-gray-400"
           onClick={() => setLoginScreenState("HIDDEN")}
@@ -116,7 +230,7 @@ export const LoginScreen = ({
           <span className="sr-only">Close</span>
         </button>
         <button
-          className="hidden rounded-2xl border-2 border-b-4 bg-[#854f6c] border-[#522b5b] px-4 py-3 text-sm font-bold uppercase text-white transition hover:bg-opacity-80 sm:block"
+          className="hidden rounded-2xl border-2 border-b-4 border-[#522b5b] bg-[#854f6c] px-4 py-3 text-sm font-bold uppercase text-white transition hover:bg-opacity-80 sm:block"
           onClick={() =>
             setLoginScreenState((x) => (x === "LOGIN" ? "SIGNUP" : "LOGIN"))
           }
@@ -124,7 +238,7 @@ export const LoginScreen = ({
           {loginScreenState === "LOGIN" ? "Sign up" : "Login"}
         </button>
       </header>
-      <div className="flex grow items-center justify-center bg-[#fbe4d8]">
+      <div className="w- flex grow items-center justify-center bg-[#fbe4d8]">
         <div className="flex w-full flex-col gap-5 sm:w-96">
           <h2 className="text-center text-2xl font-bold text-[#190019]">
             {loginScreenState === "LOGIN" ? "Log in" : "Create your profile"}
@@ -136,6 +250,7 @@ export const LoginScreen = ({
                   <input
                     className="grow rounded-2xl border-2 border-[#522b5b] bg-[#dfb6b2]  px-4 py-3 placeholder-[#2b124c] placeholder-opacity-80"
                     placeholder="Age (optional)"
+                    onChange={(e) => setAge(Number(e.target.value))}
                   />
                   <div className="absolute bottom-0 right-0 top-0 flex items-center justify-center pr-4">
                     <div
@@ -154,7 +269,7 @@ export const LoginScreen = ({
                           experience. For more details, please visit our{" "}
                           <Link
                             href="https://www.duolingo.com/privacy"
-                            className="text-white font-bold"
+                            className="font-bold text-white"
                           >
                             Privacy Policy
                           </Link>
@@ -164,12 +279,14 @@ export const LoginScreen = ({
                   </div>
                 </div>
                 <input
-                  className="grow rounded-2xl border-2 border-[#2b124c] bg-[#dfb6b2] placeholder-[#2b124c] placeholder-opacity-80 px-4 py-3"
+                  className="grow rounded-2xl border-2 border-[#2b124c] bg-[#dfb6b2] px-4 py-3 placeholder-[#2b124c] placeholder-opacity-80"
                   placeholder="Name (optional)"
                   ref={nameInputRef}
+                  onChange={(e) => setNama(e.target.value)}
                 />
               </>
             )}
+
             <input
               className="grow rounded-2xl border-2 border-[#854f6c] bg-[#dfb6b2] px-4 py-3 text-[#190019] placeholder-[#2b124c] placeholder-opacity-80 "
               placeholder={
@@ -177,12 +294,17 @@ export const LoginScreen = ({
                   ? "Email or username (optional)"
                   : "Email (optional)"
               }
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
+
             <div className="relative flex grow ">
               <input
                 className="grow rounded-2xl border-2 border-[#854f6c] bg-[#dfb6b2] px-4 py-3 text-[#190019] placeholder-[#2b124c] placeholder-opacity-80"
                 placeholder="Password (optional)"
                 type="password"
+                value={pass}
+                onChange={(e) => setPass(e.target.value)}
               />
               {loginScreenState === "LOGIN" && (
                 <div className="absolute bottom-0 right-0 top-0 flex items-center justify-center pr-5">
@@ -198,7 +320,7 @@ export const LoginScreen = ({
           </div>
           <button
             className="rounded-2xl border-b-4 border-[#522b5b] bg-[#854f6c] py-3 font-bold uppercase text-white transition hover:opacity-80"
-            onClick={logInAndSetUserProperties}
+            onClick={() => buttonClick()}
           >
             {loginScreenState === "LOGIN" ? "Log in" : "Create account"}
           </button>
@@ -216,11 +338,13 @@ export const LoginScreen = ({
             </button>
             <button
               className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-b-4 border-[#854f6c] py-3 font-bold text-blue-600 transition hover:bg-[#dfb6b2] hover:brightness-90"
-              onClick={logInAndSetUserProperties}
+              // eslint-disable-next-line @typescript-eslint/no-misused-promises
+              onClick={signInWithGoogle} //ini
             >
               <GoogleLogoSvg className="h-5 w-5" /> Google
             </button>
           </div>
+
           <p className="text-center text-xs leading-5 text-[#2b124c]">
             By signing in to Duolingo, you agree to our{" "}
             <Link
